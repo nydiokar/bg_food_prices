@@ -92,10 +92,26 @@ st.markdown("*Market signals, trends, and opportunities across Bulgaria*")
 
 # Market Overview at the top for context
 st.header("📈 Market Overview")
+
+# Load data quality report first
+from analytics.metrics import data_quality_report
+quality_report = data_quality_report(df)
+
+# Subtle data quality indicator
+if "error" not in quality_report:
+    quality_score = quality_report['data_quality_score']['score']
+    quality_grade = quality_report['data_quality_score']['grade']
+    if quality_score >= 90:
+        st.success(f"✅ Data Quality: {quality_grade} ({quality_score:.1f}) - Excellent coverage")
+    elif quality_score >= 80:
+        st.info(f"ℹ️ Data Quality: {quality_grade} ({quality_score:.1f}) - Good coverage")
+    else:
+        st.warning(f"⚠️ Data Quality: {quality_grade} ({quality_score:.1f}) - Limited coverage")
+
 bi = basket_index(df)
 national_retail = bi[bi["market_type"]=="retail"].groupby("date")["basket_index"].median().reset_index()
 
-# Create a compact market overview
+# Create a compact market overview with data quality metrics integrated
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col1:
@@ -130,14 +146,28 @@ with col2:
         
         st.metric("Current Index", f"{latest_national:.1f}")
         st.metric("vs Baseline", f"{national_change:+.1f}%")
+        
+        # Data coverage metrics (compact)
+        if "error" not in quality_report:
+            st.markdown("**📊 Data Coverage:**")
+            st.markdown(f"• **{quality_report['overview']['unique_products']}** products")
+            st.markdown(f"• **{quality_report['overview']['unique_cities']}** cities")
+            st.markdown(f"• **{quality_report['overview']['total_records']:,}** records")
 
 with col3:
     if len(national_retail) > 1:
         trend_direction = "📈 Rising" if national_change > 0 else "📉 Falling"
         st.metric("Trend", trend_direction)
         
+        # Market coverage insights (compact)
+        if "error" not in quality_report:
+            st.markdown("**🏪 Market Coverage:**")
+            st.markdown(f"• **{quality_report['city_coverage']['cities_with_retail']}** retail cities")
+            st.markdown(f"• **{quality_report['city_coverage']['cities_with_wholesale']}** wholesale cities")
+            st.markdown(f"• **{quality_report['city_coverage']['cities_with_both']}** dual coverage")
+        
         # Quick stats
-        st.markdown("**Quick Stats:**")
+        st.markdown("**📈 Quick Stats:**")
         st.markdown(f"• Data points: {len(national_retail)}")
         st.markdown(f"• Volatility: {national_retail['basket_index'].std():.1f}")
 
@@ -190,19 +220,19 @@ if watchlist_type == "🔥 Hot Products":
     
     # Compact table with better column widths
     st.dataframe(
-        display_prod[["alert", "name", "score", "trend", "yoy_pct", "risk_explanation"]].assign(
-            yoy_pct=lambda d: d["yoy_pct"].astype(str) + "%"
-        ),
-        hide_index=True,
-        column_config={
-            "alert": st.column_config.TextColumn("Alert", width="small"),
-            "name": st.column_config.TextColumn("Product", width="medium"),
-            "score": st.column_config.NumberColumn("Risk Score", width="small"),
-            "trend": st.column_config.TextColumn("Trend", width="small"),
-            "yoy_pct": st.column_config.TextColumn("YoY %", width="small"),
-            "risk_explanation": st.column_config.TextColumn("Risk Explanation", width="large")
-        }
-    )
+         display_prod[["alert", "name", "score", "trend", "yoy_pct", "risk_explanation"]].assign(
+             yoy_pct=lambda d: d["yoy_pct"].astype(str) + "%"
+         ),
+         hide_index=True,
+         column_config={
+             "alert": st.column_config.TextColumn("Alert", width="small", help="🔴 High risk (5+), 🟡 Medium risk (3-4), 🟢 Low risk (0-2)"),
+             "name": st.column_config.TextColumn("Product", width="medium"),
+             "score": st.column_config.NumberColumn("Risk Score", width="small", help="Risk score from 0-5 based on multiple factors"),
+             "trend": st.column_config.TextColumn("Trend", width="small", help="📈 Rising, 📉 Falling, ➡️ Stable (8-week trend)"),
+             "yoy_pct": st.column_config.TextColumn("YoY %", width="small", help="Year-over-year price change percentage"),
+             "risk_explanation": st.column_config.TextColumn("Risk Explanation", width="large", help="Human-readable explanation of what's causing the risk")
+         }
+     )
 
 else:
     st.subheader("Cities with unusual price patterns")
@@ -242,11 +272,11 @@ else:
         ),
         hide_index=True,
         column_config={
-            "stress": st.column_config.TextColumn("Alert", width="small"),
+            "stress": st.column_config.TextColumn("Alert", width="small", help="🔴 High margin stress, 🟡 Price premium, 🟢 Stable"),
             "city": st.column_config.TextColumn("City", width="medium"),
-            "premium_pct": st.column_config.TextColumn("Price Premium", width="small"),
-            "breadth_pct": st.column_config.TextColumn("Unusual Products %", width="small"),
-            "risk_explanation": st.column_config.TextColumn("Risk Explanation", width="large")
+            "premium_pct": st.column_config.TextColumn("Price Premium", width="small", help="How much prices in this city are above/below the national average"),
+            "breadth_pct": st.column_config.TextColumn("Unusual Products %", width="small", help="Percentage of products in this city showing unusual price patterns (high inflation, volatility, or stress)"),
+            "risk_explanation": st.column_config.TextColumn("Risk Explanation", width="large", help="Detailed breakdown of what's causing price stress in this city")
         }
     )
 
@@ -413,9 +443,9 @@ with tab1:
                     
                     # Interpretation
                     if latest_margin > 0:
-                        st.success(f"✅ Stores are currently making {latest_margin:.2f} BGN profit per unit")
+                        st.success(f"✅ Stores are currently making {latest_margin:.2f} BGN profit per unit on average")
                     else:
-                        st.error(f"❌ Stores are currently losing {abs(latest_margin):.2f} BGN per unit")
+                        st.error(f"❌ Stores are currently losing {abs(latest_margin):.2f} BGN per unit on average")
                     
                     # Yearly margin breakdown - FIXED: Use same data source for consistency
                     st.subheader("📊 Yearly Margin Analysis")
@@ -486,14 +516,14 @@ with tab1:
                         
                         # Add consistency check
                         if abs(latest_yearly_margin - latest_margin) < 0.01:  # Within 0.01 BGN
-                            st.success(f"✅ In {latest_year}, stores made {latest_yearly_margin:.2f} BGN profit per unit (consistent with current margin)")
+                            st.success(f"✅ In {latest_year}, stores made {latest_yearly_margin:.2f} BGN profit per unit on average (consistent with current margin)")
                         else:
-                            st.warning(f"⚠️ In {latest_year}, stores made {latest_yearly_margin:.2f} BGN profit per unit (vs current: {latest_margin:.2f} BGN)")
+                            st.warning(f"⚠️ In {latest_year}, stores made {latest_yearly_margin:.2f} BGN profit per unit on average (vs current: {latest_margin:.2f} BGN)")
                         
                         if latest_yearly_margin > 0:
-                            st.success(f"✅ In {latest_year}, stores made {latest_yearly_margin:.2f} BGN profit per unit")
+                            st.success(f"✅ In {latest_year}, stores made {latest_yearly_margin:.2f} BGN profit per unit on average")
                         else:
-                            st.error(f"❌ In {latest_year}, stores lost {abs(latest_yearly_margin):.2f} BGN per unit")
+                            st.error(f"❌ In {latest_year}, stores lost {abs(latest_yearly_margin):.2f} BGN per unit on average")
                     
                 else:
                     st.info("Limited margin data available for this product")

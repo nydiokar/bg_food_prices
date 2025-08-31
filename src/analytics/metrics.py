@@ -24,7 +24,7 @@ def _to_weekly_numeric(f: pd.DataFrame) -> pd.DataFrame:
 
     return (
         f.groupby(["product_id", "city", "market_type"], group_keys=False)
-         .apply(resample_group)
+         .apply(resample_group, include_groups=False)
          .reset_index(drop=True)
     )
 
@@ -579,6 +579,191 @@ def basket_index_true_equal_weight(df: pd.DataFrame) -> pd.DataFrame:
          .reset_index(name="basket_index")
     )
     return basket
+
+def data_quality_report(df: pd.DataFrame) -> dict:
+    """
+    Generate comprehensive data quality report for the dataset.
+    
+    Args:
+        df: DataFrame with price data
+        
+    Returns:
+        Dictionary containing data quality metrics and insights
+    """
+    try:
+        if df is None or df.empty:
+            return {"error": "Empty or None DataFrame"}
+        
+        report = {
+            "overview": {
+                "total_records": len(df),
+                "date_range": {
+                    "start": df["date"].min().strftime("%Y-%m-%d") if not df.empty else None,
+                    "end": df["date"].max().strftime("%Y-%m-%d") if not df.empty else None
+                },
+                "unique_products": df["product_id"].nunique(),
+                "unique_cities": df["city"].nunique(),
+                "unique_market_types": df["market_type"].nunique()
+            },
+            "data_completeness": {
+                "valid_prices": df["price"].notna().sum(),
+                "valid_dates": df["date"].notna().sum(),
+                "valid_product_ids": df["product_id"].notna().sum(),
+                "valid_cities": df["city"].notna().sum(),
+                "valid_market_types": df["market_type"].notna().sum(),
+                "valid_names": df["name"].notna().sum() if "name" in df.columns else 0
+            },
+            "market_type_distribution": df["market_type"].value_counts().to_dict(),
+            "city_coverage": {
+                "cities_with_retail": len(df[df["market_type"] == "retail"]["city"].unique()),
+                "cities_with_wholesale": len(df[df["market_type"] == "wholesale"]["city"].unique()),
+                "cities_with_both": len(
+                    set(df[df["market_type"] == "retail"]["city"].unique()) & 
+                    set(df[df["market_type"] == "wholesale"]["city"].unique())
+                )
+            },
+            "product_coverage": {
+                "products_with_retail": len(df[df["market_type"] == "retail"]["product_id"].unique()),
+                "products_with_wholesale": len(df[df["market_type"] == "wholesale"]["product_id"].unique()),
+                "products_with_both": len(
+                    set(df[df["market_type"] == "retail"]["product_id"].unique()) & 
+                    set(df[df["market_type"] == "wholesale"]["product_id"].unique())
+                )
+            },
+            "temporal_coverage": {
+                "weekly_records": len(df),
+                "date_gaps": _identify_date_gaps(df),
+                "seasonal_coverage": _analyze_seasonal_coverage(df)
+            },
+            "data_quality_score": _calculate_data_quality_score(df)
+        }
+        
+        # Calculate percentages
+        total = len(df)
+        report["data_completeness"]["price_completeness_pct"] = (report["data_completeness"]["valid_prices"] / total) * 100
+        report["data_completeness"]["date_completeness_pct"] = (report["data_completeness"]["valid_dates"] / total) * 100
+        
+        return report
+        
+    except Exception as e:
+        return {"error": f"Data quality report generation failed: {e}"}
+
+def _identify_date_gaps(df: pd.DataFrame) -> dict:
+    """Identify gaps in temporal coverage"""
+    try:
+        df_sorted = df.sort_values("date")
+        date_diff = df_sorted["date"].diff().dt.days
+        gaps = date_diff[date_diff > 7]  # Gaps larger than a week
+        
+        return {
+            "total_gaps": len(gaps),
+            "max_gap_days": int(gaps.max()) if len(gaps) > 0 else 0,
+            "avg_gap_days": float(gaps.mean()) if len(gaps) > 0 else 0,
+            "gap_distribution": gaps.value_counts().head(10).to_dict()
+        }
+    except Exception:
+        return {"error": "Date gap analysis failed"}
+
+def _analyze_seasonal_coverage(df: pd.DataFrame) -> dict:
+    """Analyze seasonal data coverage"""
+    try:
+        # Create a copy to avoid modifying original dataframe
+        df_copy = df.copy()
+        df_copy["month"] = df_copy["date"].dt.month
+        
+        # Handle case where month column might be empty
+        if df_copy["month"].isna().all():
+            return {"error": "No valid dates for seasonal analysis"}
+        
+        monthly_counts = df_copy["month"].value_counts().sort_index()
+        
+        # Ensure we have data for each season
+        spring_data = monthly_counts[monthly_counts.index.isin([3, 4, 5])]
+        summer_data = monthly_counts[monthly_counts.index.isin([6, 7, 8])]
+        autumn_data = monthly_counts[monthly_counts.index.isin([9, 10, 11])]
+        winter_data = monthly_counts[monthly_counts.index.isin([12, 1, 2])]
+        
+        return {
+            "monthly_distribution": monthly_counts.to_dict(),
+            "seasonal_balance": {
+                "spring": int(spring_data.sum()) if not spring_data.empty else 0,
+                "summer": int(summer_data.sum()) if not summer_data.empty else 0,
+                "autumn": int(autumn_data.sum()) if not autumn_data.empty else 0,
+                "winter": int(winter_data.sum()) if not winter_data.empty else 0
+            }
+        }
+    except Exception as e:
+        return {"error": f"Seasonal analysis failed: {str(e)}"}
+
+def _calculate_data_quality_score(df: pd.DataFrame) -> dict:
+    """Calculate overall data quality score"""
+    try:
+        total = len(df)
+        if total == 0:
+            return {"score": 0, "grade": "F", "issues": ["No data"]}
+        
+        # Calculate completeness scores
+        price_score = df["price"].notna().sum() / total
+        date_score = df["date"].notna().sum() / total
+        city_score = df["city"].notna().sum() / total
+        market_score = df["market_type"].notna().sum() / total
+        
+        # Calculate coverage scores
+        product_coverage = df["product_id"].nunique() / max(df["product_id"].nunique(), 1)
+        city_coverage = df["city"].nunique() / max(df["city"].nunique(), 1)
+        market_coverage = df["market_type"].nunique() / max(df["market_type"].nunique(), 1)
+        
+        # Overall score (weighted average)
+        overall_score = (
+            price_score * 0.25 +      # Price data is critical
+            date_score * 0.20 +       # Date data is critical
+            city_score * 0.15 +       # City data is important
+            market_score * 0.15 +     # Market type is important
+            product_coverage * 0.10 + # Product diversity
+            city_coverage * 0.10 +    # Geographic diversity
+            market_coverage * 0.05    # Market type diversity
+        ) * 100
+        
+        # Grade assignment
+        if overall_score >= 90:
+            grade = "A"
+        elif overall_score >= 80:
+            grade = "B"
+        elif overall_score >= 70:
+            grade = "C"
+        elif overall_score >= 60:
+            grade = "D"
+        else:
+            grade = "F"
+        
+        # Identify issues
+        issues = []
+        if price_score < 0.95:
+            issues.append(f"Price completeness: {price_score*100:.1f}%")
+        if date_score < 0.95:
+            issues.append(f"Date completeness: {date_score*100:.1f}%")
+        if city_score < 0.95:
+            issues.append(f"City completeness: {city_score*100:.1f}%")
+        if market_score < 0.95:
+            issues.append(f"Market type completeness: {market_score*100:.1f}%")
+        
+        return {
+            "score": round(overall_score, 1),
+            "grade": grade,
+            "issues": issues,
+            "component_scores": {
+                "price_completeness": round(price_score * 100, 1),
+                "date_completeness": round(date_score * 100, 1),
+                "city_completeness": round(city_score * 100, 1),
+                "market_completeness": round(market_score * 100, 1),
+                "product_coverage": round(product_coverage * 100, 1),
+                "city_coverage": round(city_coverage * 100, 1),
+                "market_coverage": round(market_coverage * 100, 1)
+            }
+        }
+        
+    except Exception as e:
+        return {"error": f"Quality score calculation failed: {e}"}
 
 def correlation_matrix(df: pd.DataFrame) -> pd.DataFrame:
     nat = (
