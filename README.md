@@ -2,6 +2,9 @@
 
 A comprehensive food price monitoring and analysis system for Bulgaria, providing market signals, trend analysis, and price intelligence across retail and wholesale markets.
 
+![Market Overview](assets/Screenshot%202025-08-31%20173500.png)
+*Market Overview with national food price trends and data quality indicators*
+
 ## 🚀 Quick Start (New Machine Setup)
 
 ### Prerequisites
@@ -85,6 +88,20 @@ python -m src.analytics.run_all
 - **Correlation Analysis**: City and product price relationships
 - **Data Quality Assessment**: Coverage, completeness, and reliability metrics
 
+## 🖼️ App Screenshots
+
+### Market Signals & Hot Products
+![Market Signals](assets/Screenshot%202025-08-31%20173515.png)
+*Product watchlist showing risk scores, trends, and human-readable risk explanations*
+
+### City Alerts & Price Patterns
+![City Alerts](assets/Screenshot%202025-08-31%20173609.png)
+*City alerts with price premiums, unusual products percentage, and risk breakdowns*
+
+### Price Anomalies Detection
+![Price Anomalies](assets/Screenshot%202025-08-31%20173741.png)
+*Weekly price anomaly detection with severity indicators and percentage changes*
+
 ## 🏗️ Project Structure
 
 ```
@@ -104,6 +121,7 @@ products-bg/
 │   ├── foodprice.sqlite       # Main database (committed to repo)
 │   ├── raw/                   # Raw JSON responses
 │   └── exports/               # Processed CSV/Parquet files
+├── assets/                    # App screenshots and visuals
 ├── requirements.txt            # Python dependencies
 └── README.md                  # This file
 ```
