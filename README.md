@@ -17,7 +17,7 @@ A comprehensive food price monitoring and analysis system for Bulgaria, providin
 #### Option A: Automated Setup (Recommended)
 ```powershell
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/nydiokar/bg_food_prices.git
 cd products-bg
 
 # Run automated setup script
