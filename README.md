@@ -242,7 +242,7 @@ pip install -r requirements.txt
 
 ## 📝 License & Attribution
 
-Data source: Bulgarian Ministry of Agriculture food price monitoring system
+Data source: Bulgarian Ministry of Economy and Industry price monitoring system
 Analysis and visualization: Custom analytics suite
 
 ---
