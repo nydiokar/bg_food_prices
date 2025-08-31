@@ -88,6 +88,43 @@ python -m src.analytics.run_all
 - **Correlation Analysis**: City and product price relationships
 - **Data Quality Assessment**: Coverage, completeness, and reliability metrics
 
+## 📈 Understanding the Basket Index System
+
+### What is the Basket Index?
+The Basket Index is a **composite measure** that tracks how food prices change over time across Bulgaria. Think of it as a "food price thermometer" that shows whether prices are going up or down nationally.
+
+### Key Terms Explained:
+
+#### 🎯 **Baseline (100)**
+- **What it is**: The starting point for all price comparisons
+- **When it was set**: At the beginning of our data collection period
+- **What it means**: When the index = 100, food prices are at their "normal" level
+- **Why 100**: It's easier to understand "108.4" means "8.4% higher than normal" than dealing with absolute price values
+
+#### 📊 **Current Index**
+- **What it is**: The current value of the food price basket
+- **Example**: 108.4 means food prices are currently 8.4% higher than the baseline
+- **How it's calculated**: Weighted average of all product prices, normalized to the baseline period
+- **What it tells us**: Whether food is getting more expensive or cheaper right now
+
+#### 📈 **vs Baseline**
+- **What it is**: The percentage change from baseline to current
+- **Example**: +8.4% means prices have increased by 8.4% since the baseline period
+- **Positive values**: Food is getting more expensive
+- **Negative values**: Food is getting cheaper
+- **Zero**: Prices are exactly at baseline levels
+
+### Real-World Example:
+- **Baseline (100)**: In January 2024, a typical food basket cost 100 BGN
+- **Current Index (108.4)**: Today, the same basket costs 108.4 BGN
+- **vs Baseline (+8.4%)**: Food prices have increased by 8.4% since January 2024
+
+### Why This Matters:
+- **Inflation tracking**: See if food prices are rising faster than general inflation
+- **Regional comparison**: Compare how different cities perform against the national baseline
+- **Trend analysis**: Identify if price increases are accelerating or stabilizing
+- **Policy insights**: Help understand the impact of economic policies on food affordability
+
 ## 🖼️ App Screenshots
 
 ### Market Signals & Hot Products
@@ -235,14 +272,14 @@ pip install -r requirements.txt
 - API endpoints for external integration
 
 ### Data Expansion
-- Additional product categories
+- Additional types of filters
 - More granular geographic coverage
-- Historical data backfilling
+- Increase coverage of metrics
 - Real-time price feeds
 
 ## 📝 License & Attribution
 
-Data source: Bulgarian Ministry of Agriculture food price monitoring system
+Data source: Bulgarian Ministry of Economy and Industry price monitoring system 
 Analysis and visualization: Custom analytics suite
 
 ---

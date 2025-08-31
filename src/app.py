@@ -93,6 +93,17 @@ st.markdown("*Market signals, trends, and opportunities across Bulgaria*")
 # Market Overview at the top for context
 st.header("📈 Market Overview")
 
+# Subtle help expander
+with st.expander("ℹ️ **Need help understanding these metrics?**", expanded=False):
+    st.markdown("""
+    **🎯 Key Concepts:**
+    - **Baseline (100)**: This is the "normal" food price level from our starting period
+    - **Current Index**: Today's food price level compared to the baseline
+    - **vs Baseline**: How much prices have changed from normal (in percentage)
+    
+    **📊 Example:** If Current Index = 108.4 and vs Baseline = +8.4%, it means food prices are 8.4% higher than normal today.
+    """)
+
 # Load data quality report first
 from analytics.metrics import data_quality_report
 quality_report = data_quality_report(df)
@@ -115,7 +126,7 @@ national_retail = bi[bi["market_type"]=="retail"].groupby("date")["basket_index"
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col1:
-    # Compact chart
+    # Elegant chart with subtle explanations
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=national_retail["date"], y=national_retail["basket_index"],
@@ -123,29 +134,46 @@ with col1:
         name='National Basket',
         line=dict(color='#ff7f0e', width=2)
     ))
-    fig.add_hline(y=100, line_dash="dash", line_color="gray")
+    fig.add_hline(y=100, line_dash="dash", line_color="gray", 
+                  annotation_text="Baseline (100) - Normal prices")
     
     fig.update_layout(
-        title="National Food Price Trend (Base=100)",
+        title=dict(
+            text="National Food Price Trend",
+            font=dict(size=16, color='white'),
+            x=0.5,
+            xanchor='center'
+        ),
         height=300,
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='white', size=10),
-        margin=dict(l=20, r=20, t=40, b=20)
+        margin=dict(l=20, r=20, t=50, b=20)
     )
     fig.update_xaxes(showgrid=False, showticklabels=False)
     fig.update_yaxes(showgrid=False)
     
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Subtle explanation below the chart
+    st.caption("💡 **Chart Guide:** Values above 100 = food more expensive than normal, below 100 = cheaper than normal")
 
 with col2:
     if len(national_retail) > 1:
         latest_national = national_retail["basket_index"].iloc[-1]
         national_change = ((latest_national - 100) / 100) * 100
         
-        st.metric("Current Index", f"{latest_national:.1f}")
-        st.metric("vs Baseline", f"{national_change:+.1f}%")
+        st.metric("Current Index", f"{latest_national:.1f}", 
+                  help="Current food price index. 100 = baseline (normal prices), 108.4 = 8.4% higher than normal")
+        st.metric("vs Baseline", f"{national_change:+.1f}%",
+                  help="Percentage change from baseline (100). Positive = food getting more expensive, negative = cheaper")
+        
+        # Small explanation below the metric
+        if national_change > 0:
+            st.caption(f"📈 Food prices are {abs(national_change):.1f}% higher than normal")
+        else:
+            st.caption(f"📉 Food prices are {abs(national_change):.1f}% lower than normal")
         
         # Data coverage metrics (compact)
         if "error" not in quality_report:
